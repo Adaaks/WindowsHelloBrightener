@@ -12,6 +12,11 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
+// Shown by Windows as the app's name (e.g. in notifications and Task Manager)
+[assembly: System.Reflection.AssemblyTitle("Windows Hello Brightener")]
+[assembly: System.Reflection.AssemblyProduct("Windows Hello Brightener")]
+[assembly: System.Reflection.AssemblyVersion("1.2.1.0")]
+
 static class Native
 {
     public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
@@ -259,9 +264,9 @@ class App : ApplicationContext
         poll.Start();
 
         if (firstRun)
-            tray.ShowBalloonTip(8000, Title,
-                "Installed and running. It starts automatically with Windows. Whenever a Windows Hello or passkey prompt appears, " +
-                "your screen lights up around it. Right-click the shield icon to change the brightness.", ToolTipIcon.Info);
+            tray.ShowBalloonTip(8000, "Ready",
+                "I'll brighten your screen whenever Windows Hello appears. Right-click my shield icon in the tray for settings.",
+                ToolTipIcon.None);
     }
 
     void SetStrength(int pct)
@@ -332,7 +337,7 @@ class App : ApplicationContext
 static class Program
 {
     public const string Name = "Windows Hello Brightener";
-    public const string Version = "1.2.0";
+    public const string Version = "1.2.1";
     public static readonly string InstallDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HelloBrightener");
     public static readonly string InstalledExe = Path.Combine(InstallDir, "HelloBrightener.exe");

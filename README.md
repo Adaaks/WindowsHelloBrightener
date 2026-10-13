@@ -1,6 +1,6 @@
-# Hello Brightener: Windows Hello face recognition that works in the dark
+# Windows Hello Brightener: face recognition that works in the dark
 
-**Windows Hello face unlock failing in a dark room? Hello Brightener turns your screen white around Windows Hello prompts so the camera can see your face.**
+**Windows Hello face unlock failing in a dark room? Windows Hello Brightener turns your screen white around Windows Hello prompts so the camera can see your face.**
 
 Made for the **Tobii Eye Tracker 5**. Its Windows Hello face recognition struggles in the dark, and extra light on your face fixes it. It also helps any other Windows Hello camera that has trouble in low light.
 
@@ -8,7 +8,7 @@ Made for the **Tobii Eye Tracker 5**. Its Windows Hello face recognition struggl
 
 ## What it does
 
-When any **Windows Security / Windows Hello** prompt appears, Hello Brightener fades the rest of that monitor to **white**. Your monitor becomes a big soft light pointed at your face. When the prompt closes, the white disappears and your screen goes back to normal.
+When any **Windows Security / Windows Hello** prompt appears, Windows Hello Brightener fades the rest of that monitor to **white**. Your monitor becomes a big soft light pointed at your face. When the prompt closes, the white disappears and your screen goes back to normal.
 
 It works with:
 
@@ -29,7 +29,7 @@ It is designed to stay out of your way:
 
 The Tobii Eye Tracker 5 supports Windows Hello face recognition, but many people find it **fails or takes ages in a dark room** and works instantly with a light on. Monitors are bright, but most Windows Hello prompts are small dark dialogs, so your face gets very little light at exactly the moment the camera needs it.
 
-Hello Brightener makes the whole screen behind the prompt white, so your face is evenly lit and recognition works first time, even with the room lights off.
+Windows Hello Brightener makes the whole screen behind the prompt white, so your face is evenly lit and recognition works first time, even with the room lights off.
 
 ## Install
 
@@ -63,7 +63,7 @@ Nothing to do. It runs in the tray and kicks in on its own. Right-click the tray
 
 ## Bonus tip: the Windows lock screen
 
-Hello Brightener can't draw on the **lock screen** or on **UAC prompts**. Windows shows those on a protected desktop that no app is allowed to draw on. For the lock screen, use a **bright or white lock screen picture** instead: *Settings → Personalization → Lock screen → Picture*. Make sure *"Show the lock screen background picture on the sign-in screen"* is turned on. With a Tobii Eye Tracker 5 this makes unlocking in the dark much more reliable.
+Windows Hello Brightener can't draw on the **lock screen** or on **UAC prompts**. Windows shows those on a protected desktop that no app is allowed to draw on. For the lock screen, use a **bright or white lock screen picture** instead: *Settings → Personalization → Lock screen → Picture*. Make sure *"Show the lock screen background picture on the sign-in screen"* is turned on. With a Tobii Eye Tracker 5 this makes unlocking in the dark much more reliable.
 
 ## Uninstall
 

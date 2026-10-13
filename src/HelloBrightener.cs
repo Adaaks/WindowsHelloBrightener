@@ -1,4 +1,4 @@
-// HelloBrightener: when a Windows Hello / Windows Security prompt (passkeys, app sign-ins)
+// Windows Hello Brightener: when a Windows Hello / Windows Security prompt (passkeys, app sign-ins)
 // appears, fill that monitor with white around the dialog so the camera sees your face better.
 using System;
 using System.Collections.Generic;
@@ -170,7 +170,7 @@ class App : ApplicationContext
 {
     static readonly string[] Processes = { "CredentialUIBroker" };
     static readonly string[] Classes = { "Credential Dialog Xaml Host" };
-    const string Title = "Hello Brightener";
+    const string Title = "Windows Hello Brightener";
 
     readonly Overlay overlay = new Overlay();
     readonly NotifyIcon tray = new NotifyIcon();
@@ -326,7 +326,7 @@ static class Program
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Couldn't install Hello Brightener: " + ex.Message, "Hello Brightener",
+                MessageBox.Show("Couldn't install Windows Hello Brightener: " + ex.Message, "Windows Hello Brightener",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             return;

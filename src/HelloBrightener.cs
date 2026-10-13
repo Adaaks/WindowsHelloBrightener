@@ -202,13 +202,11 @@ class App : ApplicationContext
     public App(bool firstRun)
     {
         ContextMenuStrip menu = new ContextMenuStrip();
-        menu.Items.Add("Test white frame (3 s)", null, delegate { testUntil = DateTime.Now.AddSeconds(3); });
-
         // White strength: lower values make the frame translucent, to calibrate for your monitor
         for (int s = 100; s >= 10; s -= 10)
         {
             int pct = s;
-            ToolStripMenuItem item = new ToolStripMenuItem(pct + "%" + (pct == 100 ? " (solid)" : pct == Settings.DefaultStrength ? " (default)" : ""));
+            ToolStripMenuItem item = new ToolStripMenuItem(pct + "%" + (pct == 100 ? " (solid)" : ""));
             item.Tag = pct;
             item.Click += delegate
             {

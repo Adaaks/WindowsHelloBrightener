@@ -56,8 +56,7 @@ This builds `HelloBrightener.exe` and runs it, which installs it just like Optio
 
 Nothing to do. It runs in the tray and kicks in on its own. Right-click the tray icon for:
 
-- **Test white frame (3 s):** shows the white frame without a real prompt, so you can see it working.
-- **White strength:** 10% to 100% (solid). The default is **70%**. Lower values are gentler on your eyes, because the desktop shows through. Higher values give the camera more light. Picking a value previews it for 3 seconds, and your choice is remembered.
+- **White strength:** 10% to 100% (solid). It starts at **70%**. Lower values are gentler on your eyes, because the desktop shows through. Higher values give the camera more light. Picking a value previews it for 3 seconds, and your choice is remembered.
 - **Start with Windows:** on by default. Untick it to stop auto-start.
 - **Exit:** closes it until your next sign-in.
 

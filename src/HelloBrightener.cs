@@ -43,29 +43,10 @@ static class Settings
         set { SetInt("Strength", value); }
     }
 
-    // Whether the user wants auto-start (they can turn it off from the tray menu)
-    public static bool AutoStartWanted
-    {
-        get { return GetInt("AutoStart", 1) != 0; }
-        set { SetInt("AutoStart", value ? 1 : 0); }
-    }
-
-    public static bool AutoStartEnabled
-    {
-        get
-        {
-            using (RegistryKey k = Registry.CurrentUser.OpenSubKey(RunKey))
-                return k != null && k.GetValue(RunName) != null;
-        }
-    }
-
-    public static void SetAutoStart(bool on)
+    public static void EnableAutoStart()
     {
         using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))
-        {
-            if (on) k.SetValue(RunName, "\"" + Program.InstalledExe + "\"");
-            else if (k.GetValue(RunName) != null) k.DeleteValue(RunName);
-        }
+            k.SetValue(RunName, "\"" + Program.InstalledExe + "\"");
     }
 
     static int GetInt(string name, int def)
@@ -196,7 +177,6 @@ class App : ApplicationContext
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
     readonly Dictionary<uint, string> names = new Dictionary<uint, string>();
     readonly ToolStripMenuItem strengthMenu = new ToolStripMenuItem("White strength");
-    readonly ToolStripMenuItem autoStartItem = new ToolStripMenuItem("Start with Windows");
     DateTime testUntil = DateTime.MinValue;
 
     public App(bool firstRun)
@@ -217,14 +197,6 @@ class App : ApplicationContext
         }
         menu.Items.Add(strengthMenu);
 
-        autoStartItem.Click += delegate
-        {
-            bool on = !Settings.AutoStartEnabled;
-            Settings.AutoStartWanted = on;
-            Settings.SetAutoStart(on);
-            autoStartItem.Checked = on;
-        };
-        menu.Items.Add(autoStartItem);
 
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { tray.Visible = false; Application.Exit(); });
@@ -235,8 +207,7 @@ class App : ApplicationContext
         tray.Visible = true;
 
         SetStrength(Settings.Strength);
-        if (Settings.AutoStartWanted) Settings.SetAutoStart(true);
-        autoStartItem.Checked = Settings.AutoStartEnabled;
+        Settings.EnableAutoStart();
         RemoveLegacyStartupShortcut();
 
         poll.Interval = 120;

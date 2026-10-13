@@ -57,7 +57,6 @@ This builds `HelloBrightener.exe` and runs it, which installs it just like Optio
 Nothing to do. It runs in the tray and kicks in on its own. Right-click the tray icon for:
 
 - **White strength:** 10% to 100% (solid). It starts at **70%**. Lower values are gentler on your eyes, because the desktop shows through. Higher values give the camera more light. Picking a value previews it for 3 seconds, and your choice is remembered.
-- **Start with Windows:** on by default. Untick it to stop auto-start.
 - **Exit:** closes it until your next sign-in.
 
 **Finding the right strength:** sit in the dark the way you normally do and try a passkey or Windows Hello prompt. If recognition is slow or fails, go up a step. If it works instantly, you can try a step lower.

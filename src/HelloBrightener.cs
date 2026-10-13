@@ -4,10 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 static class Native
 {
@@ -18,6 +21,7 @@ static class Native
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr hWnd, StringBuilder sb, int max);
     [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+    [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint key, byte alpha, uint flags);
     public const uint LWA_ALPHA = 2;
     [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out RECT value, int size);
@@ -26,18 +30,81 @@ static class Native
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9, DWMWA_CLOAKED = 14;
 }
 
+static class Settings
+{
+    const string Key = @"Software\HelloBrightener";
+    const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    const string RunName = "HelloBrightener";
+    public const int DefaultStrength = 70;
+
+    public static int Strength
+    {
+        get { int v = GetInt("Strength", DefaultStrength); return v >= 1 && v <= 100 ? v : DefaultStrength; }
+        set { SetInt("Strength", value); }
+    }
+
+    // Whether the user wants auto-start (they can turn it off from the tray menu)
+    public static bool AutoStartWanted
+    {
+        get { return GetInt("AutoStart", 1) != 0; }
+        set { SetInt("AutoStart", value ? 1 : 0); }
+    }
+
+    public static bool AutoStartEnabled
+    {
+        get
+        {
+            using (RegistryKey k = Registry.CurrentUser.OpenSubKey(RunKey))
+                return k != null && k.GetValue(RunName) != null;
+        }
+    }
+
+    public static void SetAutoStart(bool on)
+    {
+        using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))
+        {
+            if (on) k.SetValue(RunName, "\"" + Program.InstalledExe + "\"");
+            else if (k.GetValue(RunName) != null) k.DeleteValue(RunName);
+        }
+    }
+
+    static int GetInt(string name, int def)
+    {
+        try
+        {
+            using (RegistryKey k = Registry.CurrentUser.OpenSubKey(Key))
+            {
+                object v = k == null ? null : k.GetValue(name);
+                return v is int ? (int)v : def;
+            }
+        }
+        catch { return def; }
+    }
+
+    static void SetInt(string name, int value)
+    {
+        try
+        {
+            using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Key))
+                k.SetValue(name, value, RegistryValueKind.DWord);
+        }
+        catch { }
+    }
+}
+
+// A Windows Hello prompt on screen: its bounds and the DPI of the monitor it's on
+struct Prompt
+{
+    public Rectangle Bounds;
+    public int Dpi;
+}
+
 class Overlay : Form
 {
     readonly System.Windows.Forms.Timer fade = new System.Windows.Forms.Timer();
     int alpha;
     int maxAlpha = 255;
-
-    // How opaque the white is at full strength (0-255); lower lets the desktop show through.
-    public int MaxAlpha
-    {
-        get { return maxAlpha; }
-        set { maxAlpha = value; if (Visible && !fade.Enabled) SetAlpha(maxAlpha); }
-    }
+    Rectangle lastHole;
 
     public Overlay()
     {
@@ -48,6 +115,13 @@ class Overlay : Form
         StartPosition = FormStartPosition.Manual;
         fade.Interval = 15;
         fade.Tick += delegate { SetAlpha(Math.Min(maxAlpha, alpha + 30)); if (alpha >= maxAlpha) fade.Stop(); };
+    }
+
+    // How opaque the white is at full strength (0-255); lower lets the desktop show through.
+    public int MaxAlpha
+    {
+        get { return maxAlpha; }
+        set { maxAlpha = value; if (Visible && !fade.Enabled) SetAlpha(maxAlpha); }
     }
 
     // Set alpha directly: WinForms' Opacity property drops the layered alpha when it reaches 1.0,
@@ -71,16 +145,37 @@ class Overlay : Form
         }
     }
 
-    public void ShowAround(Rectangle hole)
+    public void ShowAround(Prompt prompt)
     {
-        Rectangle screen = Screen.FromRectangle(hole).Bounds;
+        Rectangle screen = Screen.FromRectangle(prompt.Bounds).Bounds;
         if (Bounds != screen) Bounds = screen;
+
+        Rectangle hole = prompt.Bounds;
         hole.Offset(-screen.X, -screen.Y);
-        Region region = new Region(new Rectangle(0, 0, screen.Width, screen.Height));
-        region.Exclude(hole);
-        Region old = Region;
-        Region = region;
-        if (old != null) old.Dispose();
+        if (hole != lastHole || Region == null)
+        {
+            // Windows 11 dialogs have 8px rounded corners (scaled with the display). Cut a matching
+            // rounded hole, pulled in by a pixel, so no gap shows around the edges or corners.
+            float scale = prompt.Dpi > 0 ? prompt.Dpi / 96f : 1f;
+            int inset = (int)Math.Ceiling(scale);
+            hole.Inflate(-inset, -inset);
+            float d = 2 * 8 * scale;
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                path.AddArc(hole.Left, hole.Top, d, d, 180, 90);
+                path.AddArc(hole.Right - d, hole.Top, d, d, 270, 90);
+                path.AddArc(hole.Right - d, hole.Bottom - d, d, d, 0, 90);
+                path.AddArc(hole.Left, hole.Bottom - d, d, d, 90, 90);
+                path.CloseFigure();
+                Region region = new Region(new Rectangle(0, 0, screen.Width, screen.Height));
+                region.Exclude(path);
+                Region old = Region;
+                Region = region;
+                if (old != null) old.Dispose();
+            }
+            lastHole = prompt.Bounds;
+            lastHole.Offset(-screen.X, -screen.Y);
+        }
         if (!Visible) { SetAlpha(0); Show(); fade.Start(); }
     }
 
@@ -94,95 +189,105 @@ class App : ApplicationContext
 {
     static readonly string[] Processes = { "CredentialUIBroker" };
     static readonly string[] Classes = { "Credential Dialog Xaml Host" };
+    const string Title = "Hello Brightener";
 
     readonly Overlay overlay = new Overlay();
     readonly NotifyIcon tray = new NotifyIcon();
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
     readonly Dictionary<uint, string> names = new Dictionary<uint, string>();
+    readonly ToolStripMenuItem strengthMenu = new ToolStripMenuItem("White strength");
+    readonly ToolStripMenuItem autoStartItem = new ToolStripMenuItem("Start with Windows");
     DateTime testUntil = DateTime.MinValue;
 
-    const string SettingsKey = @"Software\HelloBrightener";
-    static readonly int[] Strengths = { 100, 90, 75, 50, 25 };
-
-    public App()
+    public App(bool firstRun)
     {
         ContextMenuStrip menu = new ContextMenuStrip();
         menu.Items.Add("Test white frame (3 s)", null, delegate { testUntil = DateTime.Now.AddSeconds(3); });
 
         // White strength: lower values make the frame translucent, to calibrate for your monitor
-        ToolStripMenuItem strength = new ToolStripMenuItem("White strength");
-        int saved = LoadStrength();
-        foreach (int s in Strengths)
+        for (int s = 100; s >= 10; s -= 10)
         {
             int pct = s;
-            ToolStripMenuItem item = new ToolStripMenuItem(pct + "%" + (pct == 100 ? " (solid)" : ""));
-            item.Checked = pct == saved;
+            ToolStripMenuItem item = new ToolStripMenuItem(pct + "%" + (pct == 100 ? " (solid)" : pct == Settings.DefaultStrength ? " (default)" : ""));
+            item.Tag = pct;
             item.Click += delegate
             {
-                foreach (ToolStripMenuItem other in strength.DropDownItems) other.Checked = false;
-                item.Checked = true;
-                ApplyStrength(pct);
-                SaveStrength(pct);
+                SetStrength(pct);
                 testUntil = DateTime.Now.AddSeconds(3); // preview the new strength
             };
-            strength.DropDownItems.Add(item);
+            strengthMenu.DropDownItems.Add(item);
         }
-        ApplyStrength(saved);
-        menu.Items.Add(strength);
+        menu.Items.Add(strengthMenu);
+
+        autoStartItem.Click += delegate
+        {
+            bool on = !Settings.AutoStartEnabled;
+            Settings.AutoStartWanted = on;
+            Settings.SetAutoStart(on);
+            autoStartItem.Checked = on;
+        };
+        menu.Items.Add(autoStartItem);
 
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { tray.Visible = false; Application.Exit(); });
+
         tray.Icon = SystemIcons.Shield;
-        tray.Text = "Hello Brightener";
+        tray.Text = Title;
         tray.ContextMenuStrip = menu;
         tray.Visible = true;
+
+        SetStrength(Settings.Strength);
+        if (Settings.AutoStartWanted) Settings.SetAutoStart(true);
+        autoStartItem.Checked = Settings.AutoStartEnabled;
+        RemoveLegacyStartupShortcut();
 
         poll.Interval = 120;
         poll.Tick += delegate { Update(); };
         poll.Start();
+
+        if (firstRun)
+            tray.ShowBalloonTip(8000, Title,
+                "Installed and running. It starts automatically with Windows. Whenever a Windows Hello or passkey prompt appears, " +
+                "your screen turns white around it. Right-click the shield icon for options.", ToolTipIcon.Info);
     }
 
-    void ApplyStrength(int pct) { overlay.MaxAlpha = pct * 255 / 100; }
+    void SetStrength(int pct)
+    {
+        Settings.Strength = pct;
+        overlay.MaxAlpha = pct * 255 / 100;
+        foreach (ToolStripMenuItem i in strengthMenu.DropDownItems) i.Checked = (int)i.Tag == pct;
+        strengthMenu.Text = "White strength (" + pct + "%)";
+    }
 
-    static int LoadStrength()
+    // Earlier versions were started from a shortcut in the Startup folder; the Run key replaces it.
+    static void RemoveLegacyStartupShortcut()
     {
         try
         {
-            using (Microsoft.Win32.RegistryKey k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(SettingsKey))
-            {
-                object v = k == null ? null : k.GetValue("Strength");
-                if (v is int && Array.IndexOf(Strengths, (int)v) >= 0) return (int)v;
-            }
-        }
-        catch { }
-        return 100;
-    }
-
-    static void SaveStrength(int pct)
-    {
-        try
-        {
-            using (Microsoft.Win32.RegistryKey k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(SettingsKey))
-                k.SetValue("Strength", pct, Microsoft.Win32.RegistryValueKind.DWord);
+            string lnk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "HelloBrightener.lnk");
+            if (File.Exists(lnk)) File.Delete(lnk);
         }
         catch { }
     }
 
     void Update()
     {
-        Rectangle? target = FindPrompt();
+        Prompt? target = FindPrompt();
         if (target == null && DateTime.Now < testUntil)
         {
             Rectangle s = Screen.PrimaryScreen.Bounds;
-            target = new Rectangle(s.X + s.Width / 2 - 250, s.Y + s.Height / 2 - 200, 500, 400);
+            Prompt test = new Prompt();
+            test.Bounds = new Rectangle(s.X + s.Width / 2 - 250, s.Y + s.Height / 2 - 200, 500, 400);
+            test.Dpi = 96;
+            target = test;
         }
         if (target.HasValue) overlay.ShowAround(target.Value);
         else overlay.HideOverlay();
     }
 
-    Rectangle? FindPrompt()
+    Prompt? FindPrompt()
     {
-        Rectangle? found = null;
+        Prompt? found = null;
         Native.EnumWindows(delegate (IntPtr h, IntPtr l)
         {
             if (!Native.IsWindowVisible(h) || Native.IsIconic(h)) return true;
@@ -193,7 +298,10 @@ class App : ApplicationContext
             if (Native.DwmGetWindowAttribute(h, Native.DWMWA_EXTENDED_FRAME_BOUNDS, out r, Marshal.SizeOf(typeof(Native.RECT))) != 0) return true;
             Rectangle rect = Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
             if (rect.Width < 150 || rect.Height < 150) return true;
-            found = rect;
+            Prompt p = new Prompt();
+            p.Bounds = rect;
+            p.Dpi = (int)Native.GetDpiForWindow(h);
+            found = p;
             return false;
         }, IntPtr.Zero);
         return found;
@@ -221,16 +329,46 @@ class App : ApplicationContext
 
 static class Program
 {
+    public static readonly string InstallDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HelloBrightener");
+    public static readonly string InstalledExe = Path.Combine(InstallDir, "HelloBrightener.exe");
+
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
+        try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch { } // per-monitor v2, so coordinates are real pixels
+        Application.EnableVisualStyles();
+
+        // Self-install: copy to %LOCALAPPDATA%\HelloBrightener and run from there, so the user
+        // can launch the download from anywhere and it still starts with Windows afterwards.
+        string self = Path.GetFullPath(Application.ExecutablePath);
+        if (!string.Equals(self, Path.GetFullPath(InstalledExe), StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                foreach (Process p in Process.GetProcessesByName("HelloBrightener"))
+                {
+                    if (p.Id == Process.GetCurrentProcess().Id) continue;
+                    try { p.Kill(); p.WaitForExit(3000); } catch { } // replace an older running copy
+                }
+                Directory.CreateDirectory(InstallDir);
+                File.Copy(self, InstalledExe, true);
+                Process.Start(InstalledExe, "--first-run");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Couldn't install Hello Brightener: " + ex.Message, "Hello Brightener",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return;
+        }
+
         bool created;
         using (Mutex m = new Mutex(true, "HelloBrightener_SingleInstance", out created))
         {
             if (!created) return;
-            try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch { } // per-monitor v2, so coordinates are real pixels
-            Application.EnableVisualStyles();
-            Application.Run(new App());
+            bool firstRun = Array.IndexOf(args, "--first-run") >= 0;
+            Application.Run(new App(firstRun));
         }
     }
 }

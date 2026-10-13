@@ -43,10 +43,54 @@ static class Settings
         set { SetInt("Strength", value); }
     }
 
+    const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\HelloBrightener";
+    const string StartupApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
     public static void EnableAutoStart()
     {
         using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))
             k.SetValue(RunName, "\"" + Program.InstalledExe + "\"");
+    }
+
+    // List the app in Settings > Apps > Installed apps, so it can be uninstalled like any other app
+    public static void RegisterInstalledApp()
+    {
+        try
+        {
+            using (RegistryKey k = Registry.CurrentUser.CreateSubKey(UninstallKey))
+            {
+                k.SetValue("DisplayName", Program.Name);
+                k.SetValue("DisplayVersion", Program.Version);
+                k.SetValue("Publisher", "Adaaks");
+                k.SetValue("DisplayIcon", Program.InstalledExe);
+                k.SetValue("InstallLocation", Program.InstallDir);
+                k.SetValue("UninstallString", "\"" + Program.UninstallerExe + "\"");
+                k.SetValue("URLInfoAbout", "https://github.com/Adaaks/WindowsHelloBrightener");
+                k.SetValue("NoModify", 1, RegistryValueKind.DWord);
+                k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+                k.SetValue("EstimatedSize", 40, RegistryValueKind.DWord); // KB
+            }
+        }
+        catch { }
+    }
+
+    // Undo every registry change the app makes
+    public static void RemoveAll()
+    {
+        DeleteValue(RunKey, RunName);
+        DeleteValue(StartupApprovedKey, RunName); // left behind if auto-start was disabled in Task Manager
+        try { Registry.CurrentUser.DeleteSubKeyTree(Key, false); } catch { }
+        try { Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false); } catch { }
+    }
+
+    static void DeleteValue(string key, string name)
+    {
+        try
+        {
+            using (RegistryKey k = Registry.CurrentUser.OpenSubKey(key, true))
+                if (k != null) k.DeleteValue(name, false);
+        }
+        catch { }
     }
 
     static int GetInt(string name, int def)
@@ -170,19 +214,19 @@ class App : ApplicationContext
 {
     static readonly string[] Processes = { "CredentialUIBroker" };
     static readonly string[] Classes = { "Credential Dialog Xaml Host" };
-    const string Title = "Windows Hello Brightener";
+    const string Title = Program.Name;
 
     readonly Overlay overlay = new Overlay();
     readonly NotifyIcon tray = new NotifyIcon();
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
     readonly Dictionary<uint, string> names = new Dictionary<uint, string>();
-    readonly ToolStripMenuItem strengthMenu = new ToolStripMenuItem("White strength");
+    readonly ToolStripMenuItem strengthMenu = new ToolStripMenuItem("Brightness");
     DateTime testUntil = DateTime.MinValue;
 
     public App(bool firstRun)
     {
         ContextMenuStrip menu = new ContextMenuStrip();
-        // White strength: lower values make the frame translucent, to calibrate for your monitor
+        // Brightness: lower values make the white translucent, to suit your monitor and eyes
         for (int s = 100; s >= 10; s -= 10)
         {
             int pct = s;
@@ -196,8 +240,6 @@ class App : ApplicationContext
             strengthMenu.DropDownItems.Add(item);
         }
         menu.Items.Add(strengthMenu);
-
-
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { tray.Visible = false; Application.Exit(); });
 
@@ -208,7 +250,9 @@ class App : ApplicationContext
 
         SetStrength(Settings.Strength);
         Settings.EnableAutoStart();
-        RemoveLegacyStartupShortcut();
+        Settings.RegisterInstalledApp();
+        Program.EnsureUninstaller();
+        Program.RemoveLegacyStartupShortcut();
 
         poll.Interval = 120;
         poll.Tick += delegate { Update(); };
@@ -217,7 +261,7 @@ class App : ApplicationContext
         if (firstRun)
             tray.ShowBalloonTip(8000, Title,
                 "Installed and running. It starts automatically with Windows. Whenever a Windows Hello or passkey prompt appears, " +
-                "your screen turns white around it. Right-click the shield icon for options.", ToolTipIcon.Info);
+                "your screen lights up around it. Right-click the shield icon to change the brightness.", ToolTipIcon.Info);
     }
 
     void SetStrength(int pct)
@@ -225,18 +269,7 @@ class App : ApplicationContext
         Settings.Strength = pct;
         overlay.MaxAlpha = pct * 255 / 100;
         foreach (ToolStripMenuItem i in strengthMenu.DropDownItems) i.Checked = (int)i.Tag == pct;
-        strengthMenu.Text = "White strength (" + pct + "%)";
-    }
-
-    // Earlier versions were started from a shortcut in the Startup folder; the Run key replaces it.
-    static void RemoveLegacyStartupShortcut()
-    {
-        try
-        {
-            string lnk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "HelloBrightener.lnk");
-            if (File.Exists(lnk)) File.Delete(lnk);
-        }
-        catch { }
+        strengthMenu.Text = "Brightness (" + pct + "%)";
     }
 
     void Update()
@@ -298,9 +331,13 @@ class App : ApplicationContext
 
 static class Program
 {
+    public const string Name = "Windows Hello Brightener";
+    public const string Version = "1.2.0";
     public static readonly string InstallDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HelloBrightener");
     public static readonly string InstalledExe = Path.Combine(InstallDir, "HelloBrightener.exe");
+    // The uninstaller is a copy of this same exe; it uninstalls when started under this name
+    public static readonly string UninstallerExe = Path.Combine(InstallDir, "Uninstall.exe");
 
     [STAThread]
     static void Main(string[] args)
@@ -308,25 +345,29 @@ static class Program
         try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch { } // per-monitor v2, so coordinates are real pixels
         Application.EnableVisualStyles();
 
+        string self = Path.GetFullPath(Application.ExecutablePath);
+        if (string.Equals(Path.GetFileName(self), "Uninstall.exe", StringComparison.OrdinalIgnoreCase) ||
+            Array.IndexOf(args, "--uninstall") >= 0)
+        {
+            Uninstall();
+            return;
+        }
+
         // Self-install: copy to %LOCALAPPDATA%\HelloBrightener and run from there, so the user
         // can launch the download from anywhere and it still starts with Windows afterwards.
-        string self = Path.GetFullPath(Application.ExecutablePath);
         if (!string.Equals(self, Path.GetFullPath(InstalledExe), StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                foreach (Process p in Process.GetProcessesByName("HelloBrightener"))
-                {
-                    if (p.Id == Process.GetCurrentProcess().Id) continue;
-                    try { p.Kill(); p.WaitForExit(3000); } catch { } // replace an older running copy
-                }
+                StopRunningCopies();
                 Directory.CreateDirectory(InstallDir);
                 File.Copy(self, InstalledExe, true);
+                File.Copy(self, UninstallerExe, true);
                 Process.Start(InstalledExe, "--first-run");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Couldn't install Windows Hello Brightener: " + ex.Message, "Windows Hello Brightener",
+                MessageBox.Show("Couldn't install " + Name + ": " + ex.Message, Name,
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             return;
@@ -339,5 +380,63 @@ static class Program
             bool firstRun = Array.IndexOf(args, "--first-run") >= 0;
             Application.Run(new App(firstRun));
         }
+    }
+
+    // Keep Uninstall.exe next to the installed exe (and up to date after an update)
+    public static void EnsureUninstaller()
+    {
+        try
+        {
+            if (!File.Exists(UninstallerExe) || new FileInfo(UninstallerExe).Length != new FileInfo(InstalledExe).Length ||
+                File.GetLastWriteTimeUtc(UninstallerExe) < File.GetLastWriteTimeUtc(InstalledExe))
+                File.Copy(InstalledExe, UninstallerExe, true);
+        }
+        catch { }
+    }
+
+    // Earlier versions were started from a shortcut in the Startup folder; the Run key replaces it.
+    public static void RemoveLegacyStartupShortcut()
+    {
+        try
+        {
+            string lnk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "HelloBrightener.lnk");
+            if (File.Exists(lnk)) File.Delete(lnk);
+        }
+        catch { }
+    }
+
+    static void StopRunningCopies()
+    {
+        int me = Process.GetCurrentProcess().Id;
+        foreach (Process p in Process.GetProcessesByName("HelloBrightener"))
+        {
+            if (p.Id == me) continue;
+            try { p.Kill(); p.WaitForExit(3000); } catch { }
+        }
+    }
+
+    // Close the app and undo everything it changed: startup entry, settings, the Installed apps
+    // entry and the install folder.
+    static void Uninstall()
+    {
+        if (MessageBox.Show("Uninstall " + Name + "?\n\nThis closes it, stops it starting with Windows, and removes its files and settings.",
+                Name, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+        StopRunningCopies();
+        Settings.RemoveAll();
+        RemoveLegacyStartupShortcut();
+
+        MessageBox.Show(Name + " has been uninstalled.", Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        // This exe may be running from the install folder, so delete the folder once it has exited
+        try
+        {
+            ProcessStartInfo psi = new ProcessStartInfo("cmd.exe",
+                "/c ping -n 3 127.0.0.1 >nul & rmdir /s /q \"" + InstallDir + "\"");
+            psi.CreateNoWindow = true;
+            psi.UseShellExecute = false;
+            Process.Start(psi);
+        }
+        catch { }
     }
 }

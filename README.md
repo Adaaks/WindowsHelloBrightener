@@ -1,109 +1,73 @@
-# Windows Hello Brightener: face recognition that works in the dark
+# Windows Hello Brightener
 
-**Windows Hello face unlock failing in a dark room? Windows Hello Brightener turns your screen white around Windows Hello prompts so the camera can see your face.**
+**Make Windows Hello face recognition work in the dark.**
 
-Made for the **Tobii Eye Tracker 5**. Its Windows Hello face recognition struggles in the dark, and extra light on your face fixes it. It also helps any other Windows Hello camera that has trouble in low light.
+When a Windows Hello or passkey prompt appears, your screen lights up around it so the camera can see your face. Made for the **Tobii Eye Tracker 5**, and it helps any Windows Hello camera in low light.
 
-![Screen turned white around a Windows Hello "Making sure it's you" prompt](docs/screenshot.png)
+![Screen lit up around a Windows Hello prompt](docs/screenshot.png)
 
-## 🔆 Adjustable brightness
+## Features
 
-Choose how bright the white is, from a **gentle 10% glow** to **100% solid white**. Right-click the 🛡️ tray icon → **White strength**. It starts at **70%**. Each choice previews for 3 seconds and is remembered.
-
-![Tray menu: White strength from 100% (solid) down to 10%](docs/white-strength-menu.png)
-
-Lower is easier on your eyes; higher gives the camera more light. If recognition is slow in the dark, go up a step. If it's instant, try a step lower.
-
-## What it does
-
-When any **Windows Security / Windows Hello** prompt appears, Windows Hello Brightener fades the rest of that monitor to **white**. Your monitor becomes a big soft light pointed at your face. When the prompt closes, the white disappears and your screen goes back to normal.
-
-It works with:
-
-- 🔑 **Passkeys** in Chrome, Edge, Firefox, Brave and others ("Sign in with a passkey")
-- 🔐 Apps that ask you to **verify it's you** with Windows Hello (password managers, Microsoft Store, Settings and more)
-- 🪟 Any other prompt that uses the Windows Security dialog
-
-It is designed to stay out of your way:
-
-- **Click-through, never takes focus.** The prompt stays fully usable, so you can still type your PIN or press Cancel.
-- **Fits the prompt exactly.** The cut-out matches the Windows 11 dialog's rounded corners at any display scaling.
-- **Only covers the monitor the prompt is on.** Your other screens are untouched.
-- **Adjustable brightness.** Pick 10% to 100% white from the tray menu (starts at 70%).
-- **Tiny and idle.** One small `.exe` with no dependencies that just checks for the prompt a few times per second.
-- **No network access, no data collection, no admin rights needed.**
-
-## Why the Tobii Eye Tracker 5 needs this
-
-The Tobii Eye Tracker 5 supports Windows Hello face recognition, but many people find it **fails or takes ages in a dark room** and works instantly with a light on. Monitors are bright, but most Windows Hello prompts are small dark dialogs, so your face gets very little light at exactly the moment the camera needs it.
-
-Windows Hello Brightener makes the whole screen behind the prompt white, so your face is evenly lit and recognition works first time, even with the room lights off.
+- ⚡ **No setup:** run it once and it starts automatically with Windows from then on.
+- 🔑 **Works everywhere:** passkeys in any browser, app sign-ins, and any Windows Security prompt.
+- 🔆 **Adjustable brightness:** 10% to 100%, starting at 70%.
+- 🎯 **Stays out of the way:** click-through, never steals focus, and fits the prompt exactly.
+- 🪶 **Tiny and private:** an 18 KB app with no admin rights, no internet and no data collection.
 
 ## Install
 
-**Option A: download (easiest)**
+1. Download **`HelloBrightener.exe`** from the [latest release](../../releases/latest).
+2. Double-click it.
 
-1. Download `HelloBrightener.exe` from the [latest release](../../releases/latest).
-2. Double-click it. **That's it.**
+That's it. It installs itself, **runs on startup automatically**, and sits in your system tray as a 🛡️ shield icon.
 
-It installs itself to `%LOCALAPPDATA%\HelloBrightener`, **starts automatically with Windows**, and puts a 🛡️ shield icon in your system tray. There are no shortcuts to make and no settings to change.
+> Windows SmartScreen may warn that the app is unrecognised because it isn't code-signed. Click **More info → Run anyway**, or [build it yourself](#build-from-source).
 
-> Windows SmartScreen may warn about an unknown publisher because the exe isn't code-signed. If you'd rather not run a downloaded exe, use Option B. It builds the same exe from the source in this repo in a few seconds.
+## Brightness
 
-**Option B: build it yourself (no tools to install)**
+Right-click the 🛡️ tray icon → **Brightness**. Each choice previews for 3 seconds and is remembered.
 
-Windows already includes the C# compiler this needs. In PowerShell, from the repo folder:
+![Brightness menu from 100% (solid) down to 10%](docs/brightness-menu.png)
+
+Lower is easier on your eyes; higher gives the camera more light. If recognition is slow in the dark, go up a step.
+
+## Uninstall
+
+Use either of these. Both close the app and remove everything it changed:
+
+- **Settings → Apps → Installed apps → Windows Hello Brightener → Uninstall**
+- Or run **`Uninstall.exe`** in the app's folder (press **Win + R** and open `%LOCALAPPDATA%\HelloBrightener`).
+
+## Why the Tobii Eye Tracker 5 needs this
+
+The Tobii Eye Tracker 5's face recognition often fails or takes ages in a dark room but works instantly with a light on. Windows Hello prompts are small dark windows, so your face gets almost no light at the moment the camera needs it. Lighting up the screen behind the prompt fixes that.
+
+**Tip:** this app can't draw on the lock screen, because Windows protects it. For the lock screen, use a bright lock screen picture (*Settings → Personalization → Lock screen*).
+
+## Build from source
+
+No tools needed: Windows already includes the C# compiler. In PowerShell, from the repo folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1 -Install
 ```
 
-This builds `HelloBrightener.exe` and runs it, which installs it just like Option A. Leave off `-Install` to only build the exe.
+Leave off `-Install` to only build `HelloBrightener.exe`.
 
-## Usage
+<details>
+<summary><b>How it works</b></summary>
 
-Nothing to do. It runs in the tray and kicks in on its own. Right-click the tray icon for:
+- It checks a few times per second for the Windows Hello dialog (`CredentialUIBroker.exe`, window class `Credential Dialog Xaml Host`).
+- When it finds one, it shows a click-through, non-activating white overlay on that monitor, with a rounded cut-out matching the dialog at any display scaling.
+- On first run it copies itself to `%LOCALAPPDATA%\HelloBrightener`, adds itself to the per-user startup list, and registers in *Installed apps*. Settings are stored in `HKEY_CURRENT_USER\Software\HelloBrightener`.
 
-- **White strength:** 10% to 100% (solid). It starts at **70%**. Lower values are gentler on your eyes, because the desktop shows through. Higher values give the camera more light. Picking a value previews it for 3 seconds, and your choice is remembered.
-- **Exit:** closes it until your next sign-in.
+All the code is in one file: [`src/HelloBrightener.cs`](src/HelloBrightener.cs).
 
-## Bonus tip: the Windows lock screen
-
-Windows Hello Brightener can't draw on the **lock screen** or on **UAC prompts**. Windows shows those on a protected desktop that no app is allowed to draw on. For the lock screen, use a **bright or white lock screen picture** instead: *Settings → Personalization → Lock screen → Picture*. Make sure *"Show the lock screen background picture on the sign-in screen"* is turned on. With a Tobii Eye Tracker 5 this makes unlocking in the dark much more reliable.
-
-## Uninstall
-
-1. Right-click the 🛡️ tray icon → **Exit**.
-2. Remove it from startup: open **Task Manager → Startup apps**, right-click **HelloBrightener** and choose **Disable**. Or press **Win + R**, run `regedit`, and delete the `HelloBrightener` value under `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`.
-3. Delete the program folder: press **Win + R**, paste `%LOCALAPPDATA%\HelloBrightener` and delete the folder that opens.
-4. *(Optional)* Delete its settings: in `regedit`, delete the key `HKEY_CURRENT_USER\Software\HelloBrightener`.
-
-Or do all of it at once by pasting this into PowerShell:
-
-```powershell
-Stop-Process -Name HelloBrightener -ErrorAction SilentlyContinue; Start-Sleep 1
-Remove-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name HelloBrightener -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\HelloBrightener", HKCU:\Software\HelloBrightener -ErrorAction SilentlyContinue
-```
-
-## How it works
-
-- Every ~120 ms it looks for a visible window belonging to `CredentialUIBroker.exe`, the process behind the Windows Security / Windows Hello dialog, or with the class `Credential Dialog Xaml Host`.
-- When it finds one, it shows a borderless, topmost, **click-through, non-activating** white window over that monitor, with a rounded hole cut out exactly where the dialog is. It is per-monitor DPI aware, so the hole lines up on scaled displays.
-- When the dialog closes, the overlay hides.
-- On first run it copies itself to `%LOCALAPPDATA%\HelloBrightener` and registers in the standard per-user `Run` registry key, so it starts with Windows. Settings live in `HKEY_CURRENT_USER\Software\HelloBrightener`. No admin rights are needed.
-
-All the code is in a single file: [`src/HelloBrightener.cs`](src/HelloBrightener.cs).
+</details>
 
 ## Requirements
 
-- Windows 10 or Windows 11
-- A Windows Hello face camera: Tobii Eye Tracker 5, laptop IR camera, Windows Hello webcam and so on
-- .NET Framework 4.x, which is built into Windows
-
-## Keywords
-
-Windows Hello not working in the dark · Windows Hello face recognition low light · Tobii Eye Tracker 5 Windows Hello dark room · passkey face unlock dark · Windows Hello IR camera fails at night · brighten screen for Windows Hello
+Windows 10 or 11 and a Windows Hello face camera (Tobii Eye Tracker 5, laptop IR camera, Hello webcam).
 
 ## License
 

@@ -6,6 +6,14 @@ Made for the **Tobii Eye Tracker 5**. Its Windows Hello face recognition struggl
 
 ![Screen turned white around a Windows Hello "Making sure it's you" prompt](docs/screenshot.png)
 
+## 🔆 Adjustable brightness
+
+Choose how bright the white is, from a **gentle 10% glow** to **100% solid white**. Right-click the 🛡️ tray icon → **White strength**. It starts at **70%**. Each choice previews for 3 seconds and is remembered.
+
+![Tray menu: White strength from 100% (solid) down to 10%](docs/white-strength-menu.png)
+
+Lower is easier on your eyes; higher gives the camera more light. If recognition is slow in the dark, go up a step. If it's instant, try a step lower.
+
 ## What it does
 
 When any **Windows Security / Windows Hello** prompt appears, Windows Hello Brightener fades the rest of that monitor to **white**. Your monitor becomes a big soft light pointed at your face. When the prompt closes, the white disappears and your screen goes back to normal.
@@ -21,7 +29,7 @@ It is designed to stay out of your way:
 - **Click-through, never takes focus.** The prompt stays fully usable, so you can still type your PIN or press Cancel.
 - **Fits the prompt exactly.** The cut-out matches the Windows 11 dialog's rounded corners at any display scaling.
 - **Only covers the monitor the prompt is on.** Your other screens are untouched.
-- **Adjustable strength.** 70% by default, from 10% (a gentle glow) to 100% (solid white).
+- **Adjustable brightness.** Pick 10% to 100% white from the tray menu (starts at 70%).
 - **Tiny and idle.** One small `.exe` with no dependencies that just checks for the prompt a few times per second.
 - **No network access, no data collection, no admin rights needed.**
 
@@ -58,8 +66,6 @@ Nothing to do. It runs in the tray and kicks in on its own. Right-click the tray
 
 - **White strength:** 10% to 100% (solid). It starts at **70%**. Lower values are gentler on your eyes, because the desktop shows through. Higher values give the camera more light. Picking a value previews it for 3 seconds, and your choice is remembered.
 - **Exit:** closes it until your next sign-in.
-
-**Finding the right strength:** sit in the dark the way you normally do and try a passkey or Windows Hello prompt. If recognition is slow or fails, go up a step. If it works instantly, you can try a step lower.
 
 ## Bonus tip: the Windows lock screen
 

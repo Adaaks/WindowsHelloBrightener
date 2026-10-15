@@ -1,8 +1,10 @@
-<img src="docs/icon.png" alt="" width="96" align="right">
+<p align="center">
+  <img src="docs/icon.png" alt="Windows Hello Brightener icon" width="140">
+</p>
 
-# Windows Hello Brightener
+<h1 align="center">Windows Hello Brightener</h1>
 
-**Make Windows Hello face recognition work in the dark.**
+<p align="center"><b>Make Windows Hello face recognition work in the dark.</b></p>
 
 When a Windows Hello or passkey prompt appears, your screen lights up around it so the camera can see your face. Made for the **Tobii Eye Tracker 5**, and it helps any Windows Hello camera in low light.
 

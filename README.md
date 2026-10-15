@@ -6,7 +6,14 @@
 
 <p align="center"><b>Make Windows Hello face recognition work in the dark.</b></p>
 
-When a Windows Hello or passkey prompt appears, your screen lights up around it so the camera can see your face. Made for the **Tobii Eye Tracker 5**, and it helps any Windows Hello camera in low light.
+<p align="center">
+  When a Windows Hello or passkey prompt appears, your screen lights up around it so the camera can see your face.<br>
+  Made for the <b>Tobii Eye Tracker 5</b>, and it helps any Windows Hello camera in low light.
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/Adaaks/WindowsHelloBrightener?label=Download&style=for-the-badge&color=ff8a3d" alt="Download the latest release"></a>
+</p>
 
 ![Screen lit up around a Windows Hello prompt](docs/screenshot.png)
 

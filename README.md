@@ -1,3 +1,5 @@
+<img src="docs/icon.png" alt="" width="96" align="right">
+
 # Windows Hello Brightener
 
 **Make Windows Hello face recognition work in the dark.**
@@ -12,20 +14,20 @@ When a Windows Hello or passkey prompt appears, your screen lights up around it 
 - 🔑 **Works everywhere:** passkeys in any browser, app sign-ins, and any Windows Security prompt.
 - 🔆 **Adjustable brightness:** 10% to 100%, starting at 70%.
 - 🎯 **Stays out of the way:** click-through, never steals focus, and fits the prompt exactly.
-- 🪶 **Tiny and private:** an 18 KB app with no admin rights, no internet and no data collection.
+- 🪶 **Tiny and private:** a single small app with no admin rights, no internet and no data collection.
 
 ## Install
 
 1. Download **`HelloBrightener.exe`** from the [latest release](../../releases/latest).
 2. Double-click it.
 
-That's it. It installs itself, **runs on startup automatically**, and sits in your system tray as a 🛡️ shield icon.
+That's it. It installs itself, **runs on startup automatically**, and sits in your system tray as a little orange sun.
 
 > Windows SmartScreen may warn that the app is unrecognised because it isn't code-signed. Click **More info → Run anyway**, or [build it yourself](#build-from-source).
 
 ## Brightness
 
-Right-click the 🛡️ tray icon → **Brightness**. Each choice previews for 3 seconds and is remembered.
+Right-click the tray icon → **Brightness**. Each choice previews for 3 seconds and is remembered.
 
 ![Brightness menu from 100% (solid) down to 10%](docs/brightness-menu.png)
 

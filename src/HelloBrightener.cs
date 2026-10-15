@@ -15,7 +15,7 @@ using Microsoft.Win32;
 // Shown by Windows as the app's name (e.g. in notifications and Task Manager)
 [assembly: System.Reflection.AssemblyTitle("Windows Hello Brightener")]
 [assembly: System.Reflection.AssemblyProduct("Windows Hello Brightener")]
-[assembly: System.Reflection.AssemblyVersion("1.2.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
 
 static class Native
 {
@@ -248,7 +248,7 @@ class App : ApplicationContext
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { tray.Visible = false; Application.Exit(); });
 
-        tray.Icon = SystemIcons.Shield;
+        tray.Icon = LoadTrayIcon();
         tray.Text = Title;
         tray.ContextMenuStrip = menu;
         tray.Visible = true;
@@ -265,8 +265,20 @@ class App : ApplicationContext
 
         if (firstRun)
             tray.ShowBalloonTip(8000, "Ready",
-                "I'll brighten your screen whenever Windows Hello appears. Right-click my shield icon in the tray for settings.",
+                "I'll brighten your screen whenever Windows Hello appears. Right-click my icon in the tray for settings.",
                 ToolTipIcon.None);
+    }
+
+    // The app icon is embedded as a resource; pick the size Windows uses for tray icons
+    static Icon LoadTrayIcon()
+    {
+        try
+        {
+            using (Stream st = typeof(App).Assembly.GetManifestResourceStream("HelloBrightener.icon.ico"))
+                if (st != null) return new Icon(st, SystemInformation.SmallIconSize);
+        }
+        catch { }
+        return SystemIcons.Application;
     }
 
     void SetStrength(int pct)
@@ -337,7 +349,7 @@ class App : ApplicationContext
 static class Program
 {
     public const string Name = "Windows Hello Brightener";
-    public const string Version = "1.2.1";
+    public const string Version = "1.3.0";
     public static readonly string InstallDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HelloBrightener");
     public static readonly string InstalledExe = Path.Combine(InstallDir, "HelloBrightener.exe");

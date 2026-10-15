@@ -9,7 +9,8 @@ $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { throw "C# compiler not found at $csc" }
 
 $exe = Join-Path $PSScriptRoot 'HelloBrightener.exe'
-& $csc /nologo /target:winexe /optimize "/out:$exe" (Join-Path $PSScriptRoot 'src\HelloBrightener.cs')
+$icon = Join-Path $PSScriptRoot 'src\icon.ico'
+& $csc /nologo /target:winexe /optimize "/out:$exe" "/win32icon:$icon" "/resource:$icon,HelloBrightener.icon.ico" (Join-Path $PSScriptRoot 'src\HelloBrightener.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 Write-Host "Built $exe"
 
